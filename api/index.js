@@ -170,6 +170,11 @@ app.put("/api/user/profile", authenticateToken, upload.single("avatar"), async (
     }
 });
 
+
+app.get("/", (
+    request, response
+)=>(response.send("hatdog")))
+
 app.listen(5000, () => console.log("Server running on port 5000"));
 
 module.exports = app;
