@@ -11,7 +11,7 @@ const pool = new Pool({
     user: "postgres",
     host: "localhost",
     database: "literacy_dapat",
-    password: "Jctan123",
+    password: "DanTDMrocks123",
     port: 5432,
 });
 
@@ -170,6 +170,116 @@ app.put("/api/user/profile", authenticateToken, upload.single("avatar"), async (
     }
 });
 
+// Assessments API Routes
+
+// Get all assessments
+app.get("/api/assessments", authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM assessments ORDER BY created_at DESC");
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Create a new assessment
+app.post("/api/assessments", authenticateToken, async (req, res) => {
+    console.log("Received data:", req.body);
+    try {
+        const result = await pool.query(
+            `INSERT INTO assessments (student_age, student_gender, student_grade_level, student_city, student_school, student_barangay, student_region) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [
+                req.body.student_age, req.body.student_gender, req.body.student_grade_level,
+                req.body.student_city, req.body.student_school, req.body.student_barangay, req.body.student_region
+            ]
+        );
+        console.log("Inserted assessment:", result.rows[0]);
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error("Database Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete an assessment by ID
+app.post("/api/assessments/delete", async (req, res) => {
+    const { ids } = req.body;
+    if (!ids || ids.length === 0) {
+        return res.status(400).json({ message: "No assessments selected for deletion" });
+    }
+
+    try {
+        await pool.query("DELETE FRO    M assessments WHERE id = ANY($1)", [ids]);
+        res.status(200).json({ message: "Assessments deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting assessments:", error);
+        res.status(500).json({ message: "Error deleting assessments" });
+    }
+});
+app.listen(5000, () => console.log("Server running on port 5000"));
+
+// Get a specific assessment by ID
+app.get("/api/assessments/:id", authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM assessments WHERE id = $1", [req.params.id]);
+        if (result.rows.length === 0) return res.status(404).json({ message: "Assessment not found" });
+        res.json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+app.put("/api/assessments/:id/status", authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+        return res.status(400).json({ error: "Missing status field" });
+    }
+
+    try {
+        const result = await pool.query(
+            "UPDATE assessments SET status = $1 WHERE id = $2 RETURNING *",
+            [status, id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: "Assessment not found" });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Error updating assessment status:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+app.put("/api/assessments/:id/level", authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    const { level } = req.body;
+
+    if (!level) {
+        return res.status(400).json({ error: "Missing level field" });
+    }
+
+    try {
+        const result = await pool.query(
+            "UPDATE assessments SET level = $1 WHERE id = $2 RETURNING *",
+            [level, id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: "Assessment not found" });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Error updating assessment level:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
 
 app.get("/", (
     request, response
